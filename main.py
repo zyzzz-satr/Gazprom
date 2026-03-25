@@ -15,9 +15,10 @@ import os
 API_KEY = os.environ.get("APP_API_KEY")
 
 def get_api_key(x_api_key: str = Header(None)):
-    if API_KEY is None:
+    # If no API key configured, skip auth (useful for offline/demo)
+    if not API_KEY:
         return
-    if x_api_key != API_KEY:
+    if not x_api_key or x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
 # Serve static assets from the 'static' folder
@@ -91,6 +92,14 @@ async def analytics(req: Request):
     data = get_analytics(history)
     return data
 
+
+@app.get("/debug")
+async def debug(req: Request, api_key: object = Depends(get_api_key)):
+    session_id = req.query_params.get("session_id") or "default"
+    StateManager.ensure_session(session_id)
+    sess = StateManager.get_session(session_id)
+    history = sess.get("history", [])
+    return {"session_id": session_id, "history": history}
 
 if __name__ == "__main__":
     # Run with: python main.py

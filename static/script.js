@@ -90,8 +90,9 @@
       actions.appendChild(copyBtn);
       actions.appendChild(insertBtn);
       card.appendChild(actions);
-      // highlight best reply if provided by server
-      if (data.best_reply && r === data.best_reply) {
+      // highlight best reply if provided by server; fallback to first option if not provided
+      const isBest = data.best_reply ? (r === data.best_reply) : (idx === 0);
+      if (isBest) {
         card.style.border = '2px solid #1e40af';
         card.style.boxSizing = 'border-box';
       }
