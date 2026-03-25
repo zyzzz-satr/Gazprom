@@ -64,6 +64,7 @@ async def message(req: Request, api_key: object = Depends(get_api_key)):
         "tactic": result.get("tactic"),
         "next_step": result.get("next_step"),
         "history": new_history,
+        "best_reply": result.get("best_reply"),
     }
     return response
 

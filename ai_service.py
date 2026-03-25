@@ -1,4 +1,5 @@
 import os
+import hashlib
 import json
 import random
 import re
@@ -158,6 +159,15 @@ def detect_stage(text: str) -> str:
 
 def generate_reply(client_message: str, history: List[Dict[str, str]], mode: str = 'OFFLINE') -> Dict[str, Any]:
     # Normalize inputs
+    # Deterministic seeding based on message and recent history to mimic offline local runs
+    seed_input = client_message
+    if isinstance(history, list) and history:
+        tail = history[-5:]
+        tail_texts = [str(h.get("text", "")) for h in tail if isinstance(h, dict) and "text" in h]
+        seed_input += "|" + "|".join(tail_texts)
+    seed_hash = int(hashlib.sha256(seed_input.encode("utf-8")).hexdigest(), 16) & 0x7FFFFFFF
+    random.seed(seed_hash)
+
     stage = detect_stage(client_message)
     objection_type = classify_objection(client_message)
     # Choose a scenario
