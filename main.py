@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 import os
@@ -10,6 +10,15 @@ from ai_service import generate_reply, SCENARIOS, analyze_message  # for potenti
 from analytics_service import get_analytics
 
 app = FastAPI()
+
+import os
+API_KEY = os.environ.get("APP_API_KEY")
+
+def get_api_key(x_api_key: str = Header(None)):
+    if API_KEY is None:
+        return
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
 
 # Serve static assets from the 'static' folder
 BASE = Path(__file__).parent
@@ -26,7 +35,7 @@ async def index():
 
 
 @app.post("/message")
-async def message(req: Request):
+async def message(req: Request, api_key: object = Depends(get_api_key)):
     data = await req.json()
     session_id = data.get("session_id") or "default"
     client_message = data.get("client_message", "")
@@ -56,20 +65,20 @@ async def message(req: Request):
         "next_step": result.get("next_step"),
         "history": new_history,
     }
-    return JSONResponse(content=response)
+    return response
 
 
 @app.post("/config")
-async def set_config(req: Request):
+async def set_config(req: Request, api_key: object = Depends(get_api_key)):
     data = await req.json()
     mode = data.get("mode", "OFFLINE").upper()
     StateManager.set_mode(mode)
-    return JSONResponse(content({"mode": mode}))
+    return {"mode": mode}
 
 
 @app.get("/config")
-async def get_config():
-    return JSONResponse(content({"mode": StateManager.get_mode()}))
+async def get_config(api_key: object = Depends(get_api_key)):
+    return {"mode": StateManager.get_mode()}
 
 
 @app.get("/analytics")
@@ -79,7 +88,7 @@ async def analytics(req: Request):
     sess = StateManager.get_session(session_id)
     history = sess.get("history", [])
     data = get_analytics(history)
-    return JSONResponse(content=data)
+    return data
 
 
 if __name__ == "__main__":
